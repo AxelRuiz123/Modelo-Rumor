@@ -1,9 +1,7 @@
-// ======================================================================
-// MODELO DE PROPAGACIÓN DE RUMORES - AUTÓMATA CELULAR
+// Modelo de propagación de rumores usando autómatas celulares
 // Simulación similar al del esparcimiento de una enfermedad (paciente cero, propagación/infectados y recuperados)
-// ======================================================================
 
-// --- 1. VARIABLES GLOBALES DEL ESCENARIO ---
+// Variables globales del escenario
 int columnas, filas;
 int resolucion = 25; // Tamaño en píxeles de cada celda ("personita").
 
@@ -14,22 +12,23 @@ int resolucion = 25; // Tamaño en píxeles de cada celda ("personita").
 // 2: No chismoso (conoce el rumor pero decide no propagarlo/contagiar)
 int[][] poblacion;
 
-// --- 2. VARIABLES DEL MODELO MATEMÁTICO ---
+// Variables del modelo matemático
 float B = 0.5; // Probabilidad base fija de que un ignorante se vuelva chismoso al escuchar el rumor.
 boolean simulando = false; // Variable de control para pausar (false) o reproducir (true) la simulación.
+
+// Paleta de colores visuales
+color colorIgnorante = color(46, 204, 113);     // Verde: Susceptible a infectarse (ignorante)
+color colorChismoso = color(231, 76, 60);       // Rojo: Foco de infección, propagando activamente (chismoso)
+color colorNoChismoso = color(241, 196, 15);    // Amarillo: Inmune/recuperado, actúa como barrera para el rumor (no chismoso)
+
+// Configuración inicial (Se ejecuta una sola vez al iniciar)
 
 int generaciones = 0;
 
 int[] generacionesPorDecena; // guarda en qué generación se alcanzó 10, 20, 30... enterados
 
-// --- 3. PALETA DE COLORES VISUALES ---
-color colorIgnorante = color(46, 204, 113);     // Verde: Susceptible a infectarse.
-color colorChismoso = color(231, 76, 60);       // Rojo: Foco de infección, propagando activamente.
-color colorNoChismoso = color(241, 196, 15);    // Amarillo: Inmune/recuperado, actúa como barrera para el rumor.
 
-// ======================================================================
-// CONFIGURACIÓN INICIAL (Se ejecuta una sola vez al iniciar)
-// ======================================================================
+
 void setup() {
   size(800, 800); // Tamaño de la ventana de simulación
   
@@ -44,13 +43,12 @@ void setup() {
   reiniciarPoblacion(); 
 }
 
-// ======================================================================
-// CICLO DE DIBUJO (Se ejecuta continuamente, 60 veces por segundo por defecto)
-// ======================================================================
+// Ciclo de dibujo (Se ejecuta continuamente, 60 veces por segundo por defecto)
+
 void draw() {
   background(30, 35, 40); // Limpiamos la pantalla con un fondo gris oscuro en cada frame
   
-  // 1. DIBUJAR LA POBLACIÓN ACTUAL
+  // Dibujar la población actual
   // Recorremos toda la matriz para dibujar a cada "personita" según su estado
   for (int i = 0; i < columnas; i++) {
     for (int j = 0; j < filas; j++) {
@@ -69,7 +67,7 @@ void draw() {
     }
   }
   
-  // 2. ACTUALIZAR EL MODELO (SI ESTÁ CORRIENDO)
+  // Actualizar el modelo (si está corriendo)
   // frameCount % 5 == 0 hace que la simulación vaya un poco más lento (1 actualización cada 5 frames)
   // para que se pueda apreciar cómo avanza el rumor, en lugar de que ocurra instantáneamente.
   if (simulando && frameCount % 5 == 0) {
@@ -88,7 +86,7 @@ void draw() {
   registrarDecenasEnterados(porcentajeEnterados);
   int ultimaDecenaAlcanzada = obtenerUltimaDecenaAlcanzada(porcentajeEnterados);
   
-  // 3. DIBUJAR LA INTERFAZ DE USUARIO (Textos informativos)
+  // Dibujar interfaz de usuario (Textos informativos)
   fill(255);
   textSize(16);
 
@@ -110,9 +108,7 @@ fill(255);
 text("Estado: " + (simulando ? "Corriendo..." : "PAUSADO (ESPACIO para iniciar, 'R' para resetear)"), 15, 175);
 }
 
-// ======================================================================
-// INTERACCIÓN CON EL TECLADO Y MOUSE
-// ======================================================================
+// Interacción con el teclado y mouse
 
 // Función que detecta cuando se presiona una tecla
 void keyPressed() {
@@ -156,11 +152,10 @@ void iniciarRumor() {
   }
 }
 
-// ======================================================================
-// REGLAS DEL AC
-// ======================================================================
+// Reglas del Autómata Celular
+
 void aplicarReglasDelRumor() {
-  // CRÍTICO: Creamos una nueva matriz temporal.
+  // Creamos una nueva matriz temporal (importante)
   int[][] nuevaPoblacion = new int[columnas][filas];
   
   // Recorremos cada celda del escenario
@@ -170,7 +165,8 @@ void aplicarReglasDelRumor() {
       int estadoActual = poblacion[i][j];
       int vecinosChismosos = contarVecinosChismosos(i, j); // Obtenemos cuántos vecinos en rojo tiene
       
-      // --- REGLA 1: SI ES IGNORANTE (0) ---
+      // Regla 1: si es ignorante (0) 
+
       if (estadoActual == 0) { 
         
         // k es la proporción de vecinos infectados (sobre el máximo posible en Vecindad de Moore: 8)
@@ -196,7 +192,7 @@ void aplicarReglasDelRumor() {
         }
       } 
       
-      // --- REGLA 2: SI ES CHISMOSO (1) ---
+      // Regla 2: Si es chismoso (1)
       else if (estadoActual == 1) { 
         // Si tiene demasiados vecinos chismosos, el rumor pierde novedad.
         // Probabilidad de volverse no chismoso = (vecinos chismosos / 8)
@@ -209,7 +205,7 @@ void aplicarReglasDelRumor() {
         }
       } 
       
-      // --- REGLA 3: SI ES NO CHISMOSO (2) ---
+      // Regla 3: Si es no chismoso (2)
       else if (estadoActual == 2) { 
         // Es un estado absorbente (probabilidad 1 de quedarse igual).
         // Una vez que es amarillo, jamás vuelve a ser verde o rojo.
@@ -227,9 +223,8 @@ boolean barrier(int col, int row) {
   return col >= 0 && col < columnas && row >= 0 && row < filas;
 }
 
-// ======================================================================
-// VECINDAD DE MOORE CON FRONTERA FIJA (sin toroide)
-// ======================================================================
+// Vecindad de Moore con frontera fija (se ignora lo que esté fuera del espacio celular)
+
 int contarVecinosChismosos(int x, int y) {
   int count = 0;
 
@@ -243,7 +238,7 @@ int contarVecinosChismosos(int x, int y) {
       int col = x + i;
       int row = y + j;
 
-      // BARRERA: si el vecino cae fuera del grid, simplemente lo ignoramos
+      // Barrera: si el vecino cae fuera del grid, simplemente lo ignoramos
       if (!barrier(col, row)) {
         continue;
       }
@@ -257,9 +252,8 @@ int contarVecinosChismosos(int x, int y) {
   return count; // Retornamos el total de chismosos alrededor (entre 0 y 8)
 }
 
-// ======================================================================
-// FUNCIÓN PARA DIBUJAR HUMANITOS
-// ======================================================================
+// Función para dibujar "personitas"
+
 void dibujarPersona(float x, float y, float tamano, color c) {
   fill(c);      // Color de relleno
   noStroke();   // Sin bordes para un diseño más limpio
@@ -318,4 +312,3 @@ int obtenerUltimaDecenaAlcanzada(float porcentajeEnterados) {
   return (floor(porcentajeEnterados) / 10) * 10;
 }
 
- //FIN :b
